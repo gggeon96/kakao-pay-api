@@ -7,8 +7,8 @@ function PaymentSuccess() {
   useEffect(() => {
     const fetchData = async () => {
       const url = new URL(window.location.href);
-      const pgToken = url.searchParams.get('pg-token');
-      const partnerOrderId = url.searchParams.get('partner-order-id');
+      const pgToken = url.searchParams.get('pg_token');
+      const partnerOrderId = url.searchParams.get('partner_order_id');
       setPgToken(pgToken);
 
       try {
