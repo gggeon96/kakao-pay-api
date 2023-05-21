@@ -11,12 +11,10 @@ function Home() {
         price: 1000,
       };
       const response = await axios.post('http://localhost:8080/pay/ready', data);
-      localStorage.setItem('tid', response.data.tid);
-      console.log('resonse.data.tid: ' + response.data.tid);
-      console.log('localStoragetid: ' + localStorage.getItem('tid'));
 
       console.log(response.data);
-      window.open(response.data.next_redirect_pc_url, 'popup', 'width=600,height=600');
+      // window.open(response.data.next_redirect_mobile_url, 'popup', 'width=600,height=600');
+      window.location.href = response.data.next_redirect_mobile_url;
     } catch (error) {
       console.error(error);
     }
