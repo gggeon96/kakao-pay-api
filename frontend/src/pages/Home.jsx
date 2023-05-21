@@ -10,7 +10,7 @@ function Home() {
         quantity: 3,
         price: 1000,
       };
-      const response = await axios.post('http://localhost:8080/pay/ready', data);
+      const response = await axios.post('http://greencherry.store:2001/pay/ready', data);
       localStorage.setItem('tid', response.data.tid);
       console.log('resonse.data.tid: ' + response.data.tid);
       console.log('localStoragetid: ' + localStorage.getItem('tid'));
