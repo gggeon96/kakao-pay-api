@@ -16,7 +16,7 @@ function PaymentSuccess() {
           'pg-token': pgToken,
           'partner-order-id': partnerOrderId,
         };
-        const response = await axios.get(`http://localhost:8080/pay/success`, {
+        const response = await axios.get(`http://greencherry.store:2001/pay/success`, {
           params: data,
         });
         console.log(response);
