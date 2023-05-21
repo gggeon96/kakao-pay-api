@@ -42,7 +42,7 @@ public class KakaoPayService {
     private final PaymentRepository paymentRepository;
 
 
-    private KakaoReadyResponse readyResponse;
+
 
     public KakaoReadyResponse requestKakaoPay(KakaoPayRequestDto kakaoPayRequestDto) {
         //cid,admin_Key,approveUrl,cancelUrl,failUrl,requestUrl,approveRequestUrl 로그찍어보기
@@ -54,8 +54,8 @@ public class KakaoPayService {
         log.info("requestUrl : {}", requestUrl);
         log.info("approveRequestUrl : {}", approveRequestUrl);
         log.info("[service] kakaoPayReady kakaoPayReady()");
-        String uuid = java.util.UUID.randomUUID().toString();
 
+        String uuid = java.util.UUID.randomUUID().toString();
         paymentRepository.save(Payment.builder()
                 .memberId(kakaoPayRequestDto.getMemberId())
                 .itemName(kakaoPayRequestDto.getItemName())
@@ -75,13 +75,13 @@ public class KakaoPayService {
         parameters.add("total_amount", Integer.toString(kakaoPayRequestDto.getTotalAmount()));
         parameters.add("vat_amount", Integer.toString(kakaoPayRequestDto.getVatAmount()));
         parameters.add("tax_free_amount", "0");
-        parameters.add("approval_url", approveUrl);
+        parameters.add("approval_url", approveUrl+"?partner_order_id="+uuid);
         parameters.add("cancel_url", cancelUrl);
         parameters.add("fail_url", failUrl);
 
         HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(parameters, this.getHeaders());
         RestTemplate restTemplate = new RestTemplate();
-        readyResponse = restTemplate.postForObject(requestUrl, requestEntity, KakaoReadyResponse.class);
+        KakaoReadyResponse readyResponse = restTemplate.postForObject(requestUrl, requestEntity, KakaoReadyResponse.class);
 
         Payment payment = paymentRepository.findByPartnerOrderId(uuid).orElseThrow(() -> new IllegalArgumentException("결제 정보(partner-order-id)가 없습니다."));
         payment.saveTid(readyResponse.getTid());
@@ -94,34 +94,16 @@ public class KakaoPayService {
 
     /**
      * 결제 완료 승인
+     * test결제는 pgToken으로 승인할 필요가 없으니 void
      */
-    public KakaoApproveResponse approveResponse(String tid, String pgToken) {
+    public void approveTestResponse(String partnerOrderId, String pgToken) {
         log.info("[service] KakaoApproveResponse approveResponse");
-        Payment payment = paymentRepository.findByTid(tid).orElseThrow(() -> new IllegalArgumentException("결제 정보(tid)가 없습니다."));
-
-        // 카카오 요청
-        MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
-        parameters.add("cid", cid);
-        parameters.add("tid", payment.getTid());
-        parameters.add("partner_order_id", payment.getPartnerOrderId());
-        parameters.add("partner_user_id", String.valueOf(payment.getMemberId()));
-        parameters.add("pg_token", pgToken);
-
-        // 파라미터, 헤더
-        HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(parameters, this.getHeaders());
-
-        // 외부에 보낼 url
-        RestTemplate restTemplate = new RestTemplate();
-        KakaoApproveResponse approveResponse = restTemplate.postForObject(
-                approveRequestUrl,
-                requestEntity,
-                KakaoApproveResponse.class);
-
-        log.info("[service] approveResponse : {}", approveResponse);
+        Payment payment = paymentRepository.findByPartnerOrderId(partnerOrderId).orElseThrow(() -> new IllegalArgumentException("결제 정보(tid)가 없습니다."));
         payment.changeStatus(Status.PAID);
-
-        return approveResponse;
     }
+
+
+
 
     /**
      * 카카오 API 요청 Header
@@ -162,5 +144,40 @@ public class KakaoPayService {
 
         return cancelResponse;
     }
+
+    //실제 결제
+    /*public KakaoApproveResponse approveResponse(String tid, String pgToken) {
+        log.info("[service] KakaoApproveResponse approveResponse");
+        Payment payment = paymentRepository.findByTid(tid).orElseThrow(() -> new IllegalArgumentException("결제 정보(tid)가 없습니다."));
+
+        KakaoApproveResponse approveResponse = new KakaoApproveResponse();
+        approveResponse = getKakaoApproveResponse(pgToken, payment);
+        payment.changeStatus(Status.PAID);
+
+        return approveResponse;
+    }*/
+
+    /*private KakaoApproveResponse getKakaoApproveResponse(String pgToken, Payment payment) {
+        // 카카오 요청
+        MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
+        parameters.add("cid", cid);
+        parameters.add("tid", payment.getTid());
+        parameters.add("partner_order_id", payment.getPartnerOrderId());
+        parameters.add("partner_user_id", String.valueOf(payment.getMemberId()));
+        parameters.add("pg_token", pgToken);
+
+        // 파라미터, 헤더
+        HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(parameters, this.getHeaders());
+
+        // 외부에 보낼 url
+        RestTemplate restTemplate = new RestTemplate();
+        KakaoApproveResponse approveResponse = restTemplate.postForObject(
+                approveRequestUrl,
+                requestEntity,
+                KakaoApproveResponse.class);
+
+        log.info("[service] approveResponse : {}", approveResponse);
+        return approveResponse;
+    }*/
 
 }
