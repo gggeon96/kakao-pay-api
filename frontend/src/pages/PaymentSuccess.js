@@ -14,10 +14,14 @@ function PaymentSuccess() {
         const data = {
           pg_token: pg_token,
         };
-        const response = await axios.get('http://localhost:8080/pay/success', { params: data });
+        const response = await axios.get(`http://localhost:8080/pay/${localStorage.getItem('tid')}/success`, {
+          params: data,
+        });
         console.log(response);
       } catch (error) {
         console.error(error);
+      } finally {
+        localStorage.removeItem('tid');
       }
     };
     fetchData();

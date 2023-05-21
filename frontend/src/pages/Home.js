@@ -6,12 +6,15 @@ function Home() {
       const data = {
         orderId: '123',
         memberId: 5,
-        itemName: '오소유_체리박스',
+        itemName: '이채은_체리박스',
         quantity: 3,
         price: 1000,
       };
-
       const response = await axios.post('http://localhost:8080/pay/ready', data);
+      localStorage.setItem('tid', response.data.tid);
+      console.log('resonse.data.tid: ' + response.data.tid);
+      console.log('localStoragetid: ' + localStorage.getItem('tid'));
+
       console.log(response.data);
       window.open(response.data.next_redirect_pc_url, 'popup', 'width=600,height=600');
     } catch (error) {
