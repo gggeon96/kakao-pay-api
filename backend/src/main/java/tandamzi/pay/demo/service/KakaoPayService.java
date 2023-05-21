@@ -10,10 +10,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
+import tandamzi.pay.demo.domain.Payment;
+import tandamzi.pay.demo.domain.Status;
 import tandamzi.pay.demo.dto.response.KakaoApproveResponse;
 import tandamzi.pay.demo.dto.response.KakaoCancelResponse;
 import tandamzi.pay.demo.dto.response.KakaoReadyResponse;
 import tandamzi.pay.demo.dto.request.KakaoPayRequestDto;
+import tandamzi.pay.demo.repository.PaymentRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +39,8 @@ public class KakaoPayService {
     @Value("${kakao-payment.approve-request-url}")
     private String approveRequestUrl;
 
+    private final PaymentRepository paymentRepository;
+
 
     private KakaoReadyResponse readyResponse;
 
@@ -49,11 +54,21 @@ public class KakaoPayService {
         log.info("requestUrl : {}", requestUrl);
         log.info("approveRequestUrl : {}", approveRequestUrl);
         log.info("[service] kakaoPayReady kakaoPayReady()");
+        String uuid = java.util.UUID.randomUUID().toString();
+
+        paymentRepository.save(Payment.builder()
+                .memberId(kakaoPayRequestDto.getMemberId())
+                .itemName(kakaoPayRequestDto.getItemName())
+                .quantity(kakaoPayRequestDto.getQuantity())
+                .totalAmount(kakaoPayRequestDto.getTotalAmount())
+                .partnerOrderId(uuid)
+                .status(Status.CREATED)
+                .build());
 
         // 카카오페이 요청 양식
         MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
         parameters.add("cid", cid);
-        parameters.add("partner_order_id", kakaoPayRequestDto.getOrderId());
+        parameters.add("partner_order_id", uuid);
         parameters.add("partner_user_id", kakaoPayRequestDto.getMemberId().toString());
         parameters.add("item_name", kakaoPayRequestDto.getItemName());
         parameters.add("quantity", Integer.toString(kakaoPayRequestDto.getQuantity()));
@@ -68,6 +83,10 @@ public class KakaoPayService {
         RestTemplate restTemplate = new RestTemplate();
         readyResponse = restTemplate.postForObject(requestUrl, requestEntity, KakaoReadyResponse.class);
 
+        Payment payment = paymentRepository.findByPartnerOrderId(uuid).orElseThrow(() -> new IllegalArgumentException("결제 정보(partner-order-id)가 없습니다."));
+        payment.saveTid(readyResponse.getTid());
+        payment.changeStatus(Status.READY);
+
         log.info("[service] requestParameter : {}", parameters);
         log.info("[service] readyResponse : {}", readyResponse);
         return readyResponse;
@@ -76,15 +95,16 @@ public class KakaoPayService {
     /**
      * 결제 완료 승인
      */
-    public KakaoApproveResponse approveResponse(String pgToken) {
+    public KakaoApproveResponse approveResponse(String tid, String pgToken) {
         log.info("[service] KakaoApproveResponse approveResponse");
+        Payment payment = paymentRepository.findByTid(tid).orElseThrow(() -> new IllegalArgumentException("결제 정보(tid)가 없습니다."));
 
         // 카카오 요청
         MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
         parameters.add("cid", cid);
-        parameters.add("tid", readyResponse.getTid());
-        parameters.add("partner_order_id", "가맹점 주문 번호");
-        parameters.add("partner_user_id", "가맹점 회원 ID");
+        parameters.add("tid", payment.getTid());
+        parameters.add("partner_order_id", payment.getPartnerOrderId());
+        parameters.add("partner_user_id", String.valueOf(payment.getMemberId()));
         parameters.add("pg_token", pgToken);
 
         // 파라미터, 헤더
@@ -92,11 +112,13 @@ public class KakaoPayService {
 
         // 외부에 보낼 url
         RestTemplate restTemplate = new RestTemplate();
-
         KakaoApproveResponse approveResponse = restTemplate.postForObject(
                 approveRequestUrl,
                 requestEntity,
                 KakaoApproveResponse.class);
+
+        log.info("[service] approveResponse : {}", approveResponse);
+        payment.changeStatus(Status.PAID);
 
         return approveResponse;
     }

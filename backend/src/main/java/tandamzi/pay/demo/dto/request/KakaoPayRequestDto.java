@@ -8,8 +8,7 @@ import lombok.*;
 @Builder
 @ToString
 public class KakaoPayRequestDto {
-    //orderId, memberId, itemName, quantity, price
-    private String orderId;
+    // memberId, itemName, quantity, price
     private Long memberId;
     private String itemName;
     private int quantity;
