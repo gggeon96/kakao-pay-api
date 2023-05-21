@@ -6,7 +6,8 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import tandamzi.pay.demo.dto.response.KakaoApproveResponse;
+import tandamzi.pay.demo.common.response.ResponseService;
+import tandamzi.pay.demo.common.result.Result;
 import tandamzi.pay.demo.dto.response.KakaoCancelResponse;
 import tandamzi.pay.demo.dto.response.KakaoReadyResponse;
 import tandamzi.pay.demo.dto.request.KakaoPayRequestDto;
@@ -18,30 +19,32 @@ import tandamzi.pay.demo.service.KakaoPayService;
 @Slf4j
 public class KakaoPayController {
 
+    private final ResponseService responseService;
     private final KakaoPayService kakaoPayService;
 
     /**
      * 결제요청
      */
     @PostMapping("ready")
-    public KakaoReadyResponse readyToKakaoPay(@RequestBody KakaoPayRequestDto kakaoPayRequestDto){
+    public KakaoReadyResponse readyToKakaoPay(@RequestBody KakaoPayRequestDto kakaoPayRequestDto) {
         log.info("kakaoPayRequestDto : {}", kakaoPayRequestDto);
         return kakaoPayService.requestKakaoPay(kakaoPayRequestDto);
     }
 
     /**
-     * 결제 성공
+     * 가상 결제 성공
      */
-    @GetMapping("{tid}/success")
-    public ResponseEntity afterPayRequest(@PathVariable("tid") String tid ,@RequestParam("pg_token") String pgToken) {
+    @GetMapping("success")
+    public Result successPay(@RequestParam("pg-token") String pgToken, @RequestParam("partner-order-id") String partnerOrderId) {
         log.info("[controller] /success afterPayRequest ");
         log.info("pg_token : {}", pgToken);
-        log.info("tid : {}", tid);
+        log.info("partnerOrderId : {}", partnerOrderId);
 
-        KakaoApproveResponse kakaoApprove = kakaoPayService.approveResponse(tid,pgToken);
-
-        return new ResponseEntity<>(kakaoApprove, HttpStatus.OK);
+        kakaoPayService.approveTestResponse(partnerOrderId, pgToken);
+        return responseService.getSuccessResult();
     }
+
+
 
     /**
      * 결제 진행 중 취소
@@ -73,4 +76,18 @@ public class KakaoPayController {
 
         return new ResponseEntity<>(kakaoCancelResponse, HttpStatus.OK);
     }
+
+    //    /**
+//     * 실제 결제 성공
+//     */
+//    @GetMapping("success")
+//    public ResponseEntity afterPayRequest(@RequestParam("pg_token") String pgToken,@RequestParam("partner_order_id") String partnerOrderId) {
+//        log.info("[controller] /success afterPayRequest ");
+//        log.info("pg_token : {}", pgToken);
+//        log.info("partnerOrderId : {}", partnerOrderId);
+//
+//        KakaoApproveResponse kakaoApprove = kakaoPayService.approveResponse(partnerOrderId,pgToken);
+//
+//        return new ResponseEntity<>(kakaoApprove, HttpStatus.OK);
+//    }
 }
