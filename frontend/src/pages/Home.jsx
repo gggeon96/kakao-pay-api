@@ -10,8 +10,7 @@ function Home() {
         quantity: 3,
         price: 1000,
       };
-      const response = await axios.post('http://localhost:8080/pay/ready', data);
-
+      const response = await axios.post('http://greencherry.store:2001/pay/ready', data);
       console.log(response.data);
       // window.open(response.data.next_redirect_mobile_url, 'popup', 'width=600,height=600');
       window.location.href = response.data.next_redirect_mobile_url;
