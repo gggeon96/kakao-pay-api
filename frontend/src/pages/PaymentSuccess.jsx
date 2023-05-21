@@ -7,21 +7,23 @@ function PaymentSuccess() {
   useEffect(() => {
     const fetchData = async () => {
       const url = new URL(window.location.href);
-      const pg_token = url.searchParams.get('pg_token');
-      setPgToken(pg_token);
+      const pgToken = url.searchParams.get('pg-token');
+      const partnerOrderId = url.searchParams.get('partner-order-id');
+      setPgToken(pgToken);
 
       try {
         const data = {
-          pg_token: pg_token,
+          'pg-token': pgToken,
+          'partner-order-id': partnerOrderId,
         };
-        const response = await axios.get(`http://localhost:8080/pay/${localStorage.getItem('tid')}/success`, {
+        const response = await axios.get(`http://localhost:8080/pay/success`, {
           params: data,
         });
         console.log(response);
+        localStorage.setItem('paymentCompleted', 'true');
       } catch (error) {
         console.error(error);
-      } finally {
-        localStorage.removeItem('tid');
+        localStorage.setItem('paymentCompleted', 'false');
       }
     };
     fetchData();
